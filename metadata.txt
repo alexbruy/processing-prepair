@@ -1,0 +1,20 @@
+[general]
+name=prepair for Processing
+description=Repair "broken" GIS polygons
+about=Easily repair "broken" GIS polygons according to the international standard ISO19107 (Geographic information — Spatial schema).
+category=Plugins
+version=0.0.1
+qgisMinimumVersion=2.6
+
+icon=icons/prepair.png
+tags=analysis,processing,geometry
+
+author=Alexander Bruy
+email=alexander.bruy@gmail.com
+
+homepage=
+tracker=https://github.com/alexbruy/processing_prepair/issues
+repository=https://github.com/alexbruy/processing_prepair
+
+experimental=True
+deprecated=False

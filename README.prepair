@@ -1,0 +1,17 @@
+To use this plugin you need to install prepair package.
+
+Windows
+-------
+Please visit prepair repository for binary packages for 64bit systems
+https://github.com/tudelft3d/prepair/releases
+
+After installing prepair and plugin you should configure prepair folder
+(usually this is directory where prepair is installed and where
+prepair.exe file located) in Processing options dialog.
+
+Linux
+-----
+Please visit prepair repository for source package or check if this
+package available from your package manager.
+
+prepair repository: https://github.com/tudelft3d/prepair
