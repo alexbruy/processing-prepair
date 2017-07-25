@@ -1,17 +1,22 @@
-To use this plugin you need to install prepair package.
+To use this plugin you need to install prepair and pprepair packages.
 
 Windows
 -------
 Please visit prepair repository for binary packages for 64bit systems
-https://github.com/tudelft3d/prepair/releases
+https://github.com/tudelft3d/prepair/releases.
 
-After installing prepair and plugin you should configure prepair folder
-(usually this is directory where prepair is installed and where
-prepair.exe file located) in Processing options dialog.
+There is no ready-to-use packages for pprepair, you will need to build
+it from sources. Instructions can be found in the pprepair repository
+https://github.com/tudelft3d/pprepair.
+
+After installing prepair, pprepair and plugin you should activate
+prepair provider in Processing settings and configure location of the
+prepair and pprepair executables if they are not in your PATH.
 
 Linux
 -----
-Please visit prepair repository for source package or check if this
-package available from your package manager.
+Please visit prepair/pprepair repositories for sources or check if these
+packages are available from your package manager.
 
 prepair repository: https://github.com/tudelft3d/prepair
+pprepair repository: https://github.com/tudelft3d/pprepair

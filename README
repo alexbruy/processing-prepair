@@ -9,4 +9,4 @@ call native and third party algorithms from QGIS, making your spatial analysis
 tasks more productive and easy to accomplish.
 
 This plugin implements p(p)repair provider for QGIS Processing framework.
-Plugin requires QGIS >= 2.6.0
+Plugin requires QGIS >= 2.18.0
