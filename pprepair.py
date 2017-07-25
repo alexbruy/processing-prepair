@@ -71,7 +71,11 @@ class pprepair(GeoAlgorithm):
         outputFile = self.getOutputValue(self.OUTPUT)
 
         commands = []
-        commands.append(prepairUtils.pprepairPath())
+        toolPath = prepairUtils.pprepairPath()
+        if not toolPath:
+            toolPath = 'prepair'
+        commands.append(toolPath)
+
         commands.append('-i')
         commands.append(inputFile)
         commands.append('-o')

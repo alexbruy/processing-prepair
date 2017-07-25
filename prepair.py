@@ -93,7 +93,10 @@ class prepair(GeoAlgorithm):
         tmpFile = system.getTempFilename()
 
         commands = []
-        commands.append(prepairUtils.prepairPath())
+        toolPath = prepairUtils.prepairPath()
+        if not toolPath:
+            toolPath = 'prepair'
+        commands.append(toolPath)
 
         if paradigm == 1:
             commands.append('--setdiff')
