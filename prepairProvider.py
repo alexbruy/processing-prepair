@@ -5,7 +5,7 @@
     prepairProvider.py
     ---------------------
     Date                 : May 2014
-    Copyright            : (C) 2014 by Alexander Bruy
+    Copyright            : (C) 2014-2017 by Alexander Bruy
     Email                : alexander dot bruy at gmail dot com
 ***************************************************************************
 *                                                                         *
@@ -19,23 +19,23 @@
 
 __author__ = 'Alexander Bruy'
 __date__ = 'May 2014'
-__copyright__ = '(C) 2014, Alexander Bruy'
+__copyright__ = '(C) 2014-2017, Alexander Bruy'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
 __revision__ = '$Format:%H$'
 
+import os
 
-from PyQt4.QtGui import QIcon
+from qgis.PyQt.QtGui import QIcon
 
 from processing.core.AlgorithmProvider import AlgorithmProvider
 from processing.core.ProcessingConfig import Setting, ProcessingConfig
-from processing.tools import system
 
 from processing_prepair.prepair import prepair
 from processing_prepair.prepairUtils import prepairUtils
 
-from processing_prepair.resources_rc import *
+pluginPath = os.path.dirname(__file__)
 
 
 class prepairProvider(AlgorithmProvider):
@@ -53,8 +53,10 @@ class prepairProvider(AlgorithmProvider):
         AlgorithmProvider.initializeSettings(self)
 
         ProcessingConfig.addSetting(
-            Setting(self.getDescription(), prepairUtils.PREPAIR_FOLDER,
-            self.tr('prepair folder'), prepairUtils.prepairPath()))
+            Setting(self.getDescription(),
+            prepairUtils.PREPAIR_FOLDER,
+            self.tr('prepair folder'),
+            prepairUtils.prepairPath()))
 
     def unload(self):
         AlgorithmProvider.unload(self)
@@ -68,7 +70,7 @@ class prepairProvider(AlgorithmProvider):
         return 'prepair'
 
     def getIcon(self):
-        return QIcon(':/icons/prepair.png')
+        return QIcon(os.path.join(pluginPath, 'icons', 'prepair.png'))
 
     def _loadAlgorithms(self):
         self.algs = self.alglist

@@ -5,7 +5,7 @@
     prepair.py
     ---------------------
     Date                 : November 2014
-    Copyright            : (C) 2014 by Alexander Bruy
+    Copyright            : (C) 2014-2017 by Alexander Bruy
     Email                : alexander dot bruy at gmail dot com
 ***************************************************************************
 *                                                                         *
@@ -19,7 +19,7 @@
 
 __author__ = 'Alexander Bruy'
 __date__ = 'November 2014'
-__copyright__ = '(C) 2014, Alexander Bruy'
+__copyright__ = '(C) 2014-2017, Alexander Bruy'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
@@ -27,7 +27,7 @@ __revision__ = '$Format:%H$'
 
 import os
 
-from PyQt4.QtGui import QIcon
+from qgis.PyQt.QtGui import QIcon
 
 from qgis.core import *
 
@@ -47,7 +47,7 @@ from processing.tools import system
 
 from processing_prepair.prepairUtils import prepairUtils
 
-from processing_prepair.resources_rc import *
+pluginPath = os.path.dirname(__file__)
 
 
 class prepair(GeoAlgorithm):
@@ -62,7 +62,7 @@ class prepair(GeoAlgorithm):
     PARADIGMS = ['Odd-even', 'Point set topology']
 
     def getIcon(self):
-        return QIcon(':/icons/prepair.png')
+        return QIcon(os.path.join(pluginPath, 'icons', 'prepair.png'))
 
     def defineCharacteristics(self):
         self.name = 'prepair'
@@ -118,7 +118,7 @@ class prepair(GeoAlgorithm):
             geom = ft.geometry()
             if onlyInvalid and len(geom.validateGeometry()) == 0:
                 progress.setInfo(
-                    self.tr('Feature %s is valid, skipping...') % ft.id())
+                    self.tr('Feature {} is valid, skipping...'.format(ft.id())))
                 progress.setPercentage(int(count * total))
                 continue
 
@@ -128,15 +128,15 @@ class prepair(GeoAlgorithm):
             result = prepairUtils.execute(commands, progress)
 
             if len(result) == 0:
-                progress.setInfo(self.tr('Feature %s not repaired') % ft.id())
+                progress.setInfo(self.tr('Feature {} not repaired'.format(ft.id())))
                 progress.setPercentage(int(count * total))
                 continue
 
             geom = QgsGeometry.fromWkt(result[0].strip())
             if geom is None or geom.isGeosEmpty():
                 progress.setInfo(
-                    self.tr('Empty geometry after repairing feature %s, '
-                            'skipping...') % ft.id())
+                    self.tr('Empty geometry after repairing feature {}, '
+                            'skipping...'.format(ft.id())))
                 progress.setPercentage(int(count * total))
                 continue
 
