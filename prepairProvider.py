@@ -33,6 +33,7 @@ from processing.core.AlgorithmProvider import AlgorithmProvider
 from processing.core.ProcessingConfig import Setting, ProcessingConfig
 
 from processing_prepair.prepair import prepair
+from processing_prepair.pprepair import pprepair
 from processing_prepair.prepairUtils import prepairUtils
 
 pluginPath = os.path.dirname(__file__)
@@ -45,23 +46,31 @@ class prepairProvider(AlgorithmProvider):
 
         self.activate = False
 
-        self.alglist = [prepair()]
+        self.alglist = [prepair(), pprepair()]
         for alg in self.alglist:
             alg.provider = self
 
     def initializeSettings(self):
         AlgorithmProvider.initializeSettings(self)
 
-        ProcessingConfig.addSetting(
-            Setting(self.getDescription(),
-            prepairUtils.PREPAIR_FOLDER,
-            self.tr('prepair folder'),
-            prepairUtils.prepairPath()))
+        ProcessingConfig.addSetting(Setting(
+            self.getDescription(),
+            prepairUtils.PREPAIR_EXECUTABLE,
+            self.tr('prepair executable'),
+            prepairUtils.prepairPath(),
+            valuetype=Setting.FILE))
+        ProcessingConfig.addSetting(Setting(
+            self.getDescription(),
+            prepairUtils.PPREPAIR_EXECUTABLE,
+            self.tr('pprepair executable'),
+            prepairUtils.prepairPath(),
+            valuetype=Setting.FILE))
 
     def unload(self):
         AlgorithmProvider.unload(self)
 
-        ProcessingConfig.removeSetting(prepairUtils.PREPAIR_FOLDER)
+        ProcessingConfig.removeSetting(prepairUtils.PREPAIR_EXECUTABLE)
+        ProcessingConfig.removeSetting(prepairUtils.PPREPAIR_EXECUTABLE)
 
     def getName(self):
         return 'prepair'

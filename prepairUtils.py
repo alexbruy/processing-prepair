@@ -34,16 +34,23 @@ from processing.core.ProcessingConfig import ProcessingConfig
 
 class prepairUtils:
 
-    PREPAIR_FOLDER = 'PREPAIR_FOLDER'
+    PREPAIR_EXECUTABLE = 'PREPAIR_EXECUTABLE'
+    PPREPAIR_EXECUTABLE = 'PPREPAIR_EXECUTABLE'
 
     @staticmethod
     def prepairPath():
-        folder = ProcessingConfig.getSetting(prepairUtils.PREPAIR_FOLDER)
-        return folder if folder is not None else ''
+        filePath = ProcessingConfig.getSetting(prepairUtils.PREPAIR_EXECUTABLE)
+        return filePath if filePath is not None else ''
+
+    @staticmethod
+    def pprepairPath():
+        filePath = ProcessingConfig.getSetting(prepairUtils.PPREPAIR_EXECUTABLE)
+        return filePath if filePath is not None else ''
 
     @staticmethod
     def execute(command, progress):
         fused_command = ''.join(['"{}" '.format(c) for c in command])
+        print fused_command
 
         loglines = []
         proc = subprocess.Popen(
@@ -56,5 +63,6 @@ class prepairUtils:
             ).stdout
         for line in iter(proc.readline, ''):
             loglines.append(line)
+            progress.setConsoleInfo(line)
 
         return loglines
