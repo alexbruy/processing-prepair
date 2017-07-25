@@ -3,7 +3,7 @@ name=prepair for Processing
 description=Repair "broken" GIS polygons
 about=Easily repair "broken" GIS polygons according to the international standard ISO19107 (Geographic information — Spatial schema).
 category=Plugins
-version=0.1.0
+version=0.5.0
 qgisMinimumVersion=2.18
 
 icon=icons/prepair.png
