@@ -29,8 +29,6 @@ import os
 import sys
 import inspect
 
-from qgis.core import *
-
 from processing.core.Processing import Processing
 from processing_prepair.prepairProvider import prepairProvider
 
