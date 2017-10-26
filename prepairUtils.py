@@ -50,7 +50,6 @@ class prepairUtils:
     @staticmethod
     def execute(command, progress):
         fused_command = ''.join(['"{}" '.format(c) for c in command])
-        print fused_command
 
         loglines = []
         proc = subprocess.Popen(
