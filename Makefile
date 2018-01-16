@@ -22,7 +22,7 @@ pep8:
 
 clean:
 	find -name "*.qm" -exec rm -r {} \;
-	find -name "__pycache__" -type d -exec rm -r {} \;
+	find . -name "__pycache__" -type d -exec rm -rf \; -prune
 	rm -f $(PLUGIN_NAME).zip
 
 package: clean ts qm
