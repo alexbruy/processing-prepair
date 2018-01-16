@@ -5,7 +5,7 @@
     prepairUtils.py
     ---------------------
     Date                 : November 2014
-    Copyright            : (C) 2014-2017 by Alexander Bruy
+    Copyright            : (C) 2014-2018 by Alexander Bruy
     Email                : alexander dot bruy at gmail dot com
 ***************************************************************************
 *                                                                         *
@@ -19,7 +19,7 @@
 
 __author__ = 'Alexander Bruy'
 __date__ = 'November 2014'
-__copyright__ = '(C) 2014-2017, Alexander Bruy'
+__copyright__ = '(C) 2014-2018, Alexander Bruy'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
@@ -28,40 +28,51 @@ __revision__ = '$Format:%H$'
 import os
 import subprocess
 
+from qgis.core import QgsMessageLog, QgsProcessingFeedback
 from processing.core.ProcessingLog import ProcessingLog
 from processing.core.ProcessingConfig import ProcessingConfig
 
+PREPAIR_ACTIVE = "PREPAIR_ACTIVE"
+PREPAIR_EXECUTABLE = "PREPAIR_EXECUTABLE"
+PPREPAIR_EXECUTABLE = "PPREPAIR_EXECUTABLE"
+PREPAIR_VERBOSE = "PREPAIR_VERBOSE"
 
-class prepairUtils:
 
-    PREPAIR_EXECUTABLE = 'PREPAIR_EXECUTABLE'
-    PPREPAIR_EXECUTABLE = 'PPREPAIR_EXECUTABLE'
+def prepairPath():
+    filePath = ProcessingConfig.getSetting(PREPAIR_EXECUTABLE)
+    return filePath if filePath is not None else ""
 
-    @staticmethod
-    def prepairPath():
-        filePath = ProcessingConfig.getSetting(prepairUtils.PREPAIR_EXECUTABLE)
-        return filePath if filePath is not None else ''
 
-    @staticmethod
-    def pprepairPath():
-        filePath = ProcessingConfig.getSetting(prepairUtils.PPREPAIR_EXECUTABLE)
-        return filePath if filePath is not None else ''
+def pprepairPath():
+    filePath = ProcessingConfig.getSetting(PPREPAIR_EXECUTABLE)
+    return filePath if filePath is not None else ""
 
-    @staticmethod
-    def execute(command, progress):
-        fused_command = ''.join(['"{}" '.format(c) for c in command])
 
-        loglines = []
-        proc = subprocess.Popen(
-            fused_command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            ).stdout
-        for line in iter(proc.readline, ''):
-            loglines.append(line)
-            progress.setConsoleInfo(line)
+def execute(commands, feedback=None):
+    if feedback is None:
+        feedback = QgsProcessingFeedback()
 
-        return loglines
+    fused_command = " ".join([str(c) for c in commands])
+    QgsMessageLog.logMessage(fused_command, "Processing", QgsMessageLog.INFO)
+    feedback.pushInfo("preparir command:")
+    feedback.pushCommandInfo(fused_command)
+    feedback.pushInfo("prepair command output:")
+
+    loglines = []
+    with subprocess.Popen(fused_command,
+                          shell=True,
+                          stdout=subprocess.PIPE,
+                          stdin=subprocess.DEVNULL,
+                          stderr=subprocess.STDOUT,
+                          universal_newlines=True) as proc:
+        try:
+            for line in iter(proc.stdout.readline, ""):
+                feedback.pushConsoleInfo(line)
+                loglines.append(line)
+        except:
+            pass
+
+    if ProcessingConfig.getSetting(PREPAIR_VERBOSE):
+        QgsMessageLog.logMessage("\n".join(loglines), "Processing", QgsMessageLog.INFO)
+
+    return loglines

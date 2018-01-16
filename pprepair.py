@@ -5,7 +5,7 @@
     pprepair.py
     ---------------------
     Date                 : July 2017
-    Copyright            : (C) 2017 by Alexander Bruy
+    Copyright            : (C) 2017-2018 by Alexander Bruy
     Email                : alexander dot bruy at gmail dot com
 ***************************************************************************
 *                                                                         *
@@ -19,7 +19,7 @@
 
 __author__ = 'Alexander Bruy'
 __date__ = 'July 2017'
-__copyright__ = '(C) 2017, Alexander Bruy'
+__copyright__ = '(C) 2017-2018, Alexander Bruy'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
@@ -27,59 +27,88 @@ __revision__ = '$Format:%H$'
 
 import os
 
+from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 
-from qgis.core import *
-
-from processing.core.Processing import Processing
-from processing.core.ProcessingConfig import ProcessingConfig
-from processing.core.GeoAlgorithm import GeoAlgorithm
-
-from processing.core.parameters import ParameterVector
-from processing.core.parameters import ParameterNumber
-from processing.core.parameters import ParameterBoolean
-from processing.core.parameters import ParameterSelection
-from processing.core.outputs import OutputVector
-
-from processing.tools import dataobjects
-from processing.tools import vector
-from processing.tools import system
-
-from processing_prepair.prepairUtils import prepairUtils
+from qgis.core import (QgsProcessing,
+                       QgsProcessingAlgorithm,
+                       QgsProcessingParameterVectorLayer,
+                       QgsProcessingParameterVectorDestination
+                      )
+from processing_prepair import prepairUtils
 
 pluginPath = os.path.dirname(__file__)
 
 
-class pprepair(GeoAlgorithm):
+class pprepair(QgsProcessingAlgorithm):
 
-    INPUT_LAYER = 'INPUT_LAYER'
+    INPUT = 'INPUT'
     OUTPUT = 'OUTPUT'
 
-    def getIcon(self):
-        return QIcon(os.path.join(pluginPath, 'icons', 'pprepair.png'))
+    def __init__(self):
+        super().__init__()
 
-    def defineCharacteristics(self):
-        self.name = 'pprepair'
-        self.group = 'prepair'
+    def createInstance(self):
+        return type(self)()
 
-        self.addParameter(ParameterVector(self.INPUT_LAYER,
-            self.tr('Layer to repair'), [ParameterVector.VECTOR_TYPE_POLYGON]))
-        self.addOutput(OutputVector(self.OUTPUT, self.tr('Repaired layer')))
+    def icon(self):
+        return QIcon(os.path.join(pluginPath, "icons", "pprepair.png"))
 
-    def processAlgorithm(self, progress):
-        inputFile = self.getParameterValue(self.INPUT_LAYER)
-        outputFile = self.getOutputValue(self.OUTPUT)
+    def tr(self, text):
+        return QCoreApplication.translate("pprepair", text)
 
-        commands = []
+    def name(self):
+        return "pprepair"
+
+    def displayName(self):
+        return self.tr("pprepair")
+
+    def group(self):
+        return self.tr("Geometry tools")
+
+    def groupId(self):
+        return "geometrytools"
+
+    def tags(self):
+        return self.tr("polygon,repair,broken,geometry").split(",")
+
+    def shortHelpString(self):
+        return self.tr("Automatic repair of planar partitions.")
+
+    def helpUrl(self):
+        return "https://github.com/tudelft3d/pprepair"
+
+    def __init__(self):
+        super().__init__()
+
+    def initAlgorithm(self, config=None):
+        self.addParameter(QgsProcessingParameterVectorLayer(self.INPUT,
+                                                              self.tr("Input layer"),
+                                                              [QgsProcessing.TypeVectorPolygon]))
+        self.addParameter(QgsProcessingParameterVectorDestination(self.OUTPUT,
+                                                                  self.tr("Repaired polygons"),
+                                                                  QgsProcessing.TypeVectorPolygon))
+
+    def processAlgorithm(self, parameters, context, feedback):
+        arguments = []
+
         toolPath = prepairUtils.pprepairPath()
-        if not toolPath:
-            toolPath = 'prepair'
-        commands.append(toolPath)
+        if toolPath == "":
+            toolPath = self.name()
 
-        commands.append('-i')
-        commands.append(inputFile)
-        commands.append('-o')
-        commands.append(outputFile)
-        commands.append('-fix')
+        arguments.append(toolPath)
+        arguments.append("-i")
+        arguments.append(self.parameterAsVectorLayer(parameters, self.INPUT, context).source())
+        arguments.append("-o")
+        arguments.append(self.parameterAsOutputLayer(parameters, self.OUTPUT, context))
+        arguments.append("-fix")
 
-        prepairUtils.execute(commands, progress)
+        prepairUtils.execute(arguments, feedback)
+
+        results = {}
+        for output in self.outputDefinitions():
+            outputName = output.name()
+            if outputName in parameters:
+                results[outputName] = parameters[outputName]
+
+        return results

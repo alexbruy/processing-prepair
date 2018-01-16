@@ -5,7 +5,7 @@
     prepair.py
     ---------------------
     Date                 : November 2014
-    Copyright            : (C) 2014-2017 by Alexander Bruy
+    Copyright            : (C) 2014-2018 by Alexander Bruy
     Email                : alexander dot bruy at gmail dot com
 ***************************************************************************
 *                                                                         *
@@ -19,133 +19,176 @@
 
 __author__ = 'Alexander Bruy'
 __date__ = 'November 2014'
-__copyright__ = '(C) 2014-2017, Alexander Bruy'
+__copyright__ = '(C) 2014-2018, Alexander Bruy'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
 __revision__ = '$Format:%H$'
 
 import os
+from collections import OrderedDict
 
+from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 
-from qgis.core import *
-
-from processing.core.Processing import Processing
-from processing.core.ProcessingConfig import ProcessingConfig
-from processing.core.GeoAlgorithm import GeoAlgorithm
-
-from processing.core.parameters import ParameterVector
-from processing.core.parameters import ParameterNumber
-from processing.core.parameters import ParameterBoolean
-from processing.core.parameters import ParameterSelection
-from processing.core.outputs import OutputVector
-
-from processing.tools import dataobjects
-from processing.tools import vector
-from processing.tools import system
-
-from processing_prepair.prepairUtils import prepairUtils
+from qgis.core import (QgsGeometry,
+                       QgsFeatureSink,
+                       QgsFeatureRequest,
+                       QgsProcessing,
+                       QgsProcessingUtils,
+                       QgsProcessingAlgorithm,
+                       QgsProcessingFeatureSource,
+                       QgsProcessingParameterFeatureSource,
+                       QgsProcessingParameterEnum,
+                       QgsProcessingParameterNumber,
+                       QgsProcessingParameterBoolean,
+                       QgsProcessingParameterFeatureSink
+                      )
+from processing_prepair import prepairUtils
 
 pluginPath = os.path.dirname(__file__)
 
 
-class prepair(GeoAlgorithm):
+class prepair(QgsProcessingAlgorithm):
 
-    INPUT_LAYER = 'INPUT_LAYER'
+    INPUT = 'INPUT'
     PARADIGM = 'PARADIGM'
     MIN_AREA = 'MIN_AREA'
     SNAP_ROUNDING = 'SNAP_ROUNDING'
     ONLY_INVALID = 'ONLY_INVALID'
     OUTPUT = 'OUTPUT'
 
-    PARADIGMS = ['Odd-even', 'Point set topology']
+    def __init__(self):
+        super().__init__()
 
-    def getIcon(self):
-        return QIcon(os.path.join(pluginPath, 'icons', 'prepair.png'))
+    def createInstance(self):
+        return type(self)()
 
-    def defineCharacteristics(self):
-        self.name = 'prepair'
-        self.group = 'prepair'
+    def icon(self):
+        return QIcon(os.path.join(pluginPath, "icons", "prepair.png"))
 
-        self.addParameter(ParameterVector(self.INPUT_LAYER,
-            self.tr('Layer to repair'), [ParameterVector.VECTOR_TYPE_POLYGON]))
-        self.addParameter(ParameterSelection(self.PARADIGM,
-            self.tr('Repair paradigm'), self.PARADIGMS, 0))
-        self.addParameter(ParameterNumber(self.MIN_AREA,
-            self.tr('Remove sliver polugons'), 0.0, 999999.999999, 0.0))
-        self.addParameter(ParameterNumber(self.SNAP_ROUNDING,
-            self.tr('Snap round input'), 0, 999999, 0))
-        self.addParameter(ParameterBoolean(self.ONLY_INVALID,
-            self.tr('Process only invalid geometries'), False))
+    def tr(self, text):
+        return QCoreApplication.translate("prepair", text)
 
-        self.addOutput(OutputVector(self.OUTPUT, self.tr('Repaired layer')))
+    def name(self):
+        return "prepair"
 
-    def processAlgorithm(self, progress):
-        layer = dataobjects.getObjectFromUri(
-            self.getParameterValue(self.INPUT_LAYER))
+    def displayName(self):
+        return self.tr("prepair")
 
-        paradigm = self.getParameterValue(self.PARADIGM)
-        minArea = self.getParameterValue(self.MIN_AREA)
-        snapRounding = self.getParameterValue(self.SNAP_ROUNDING)
-        onlyInvalid = self.getParameterValue(self.ONLY_INVALID)
+    def group(self):
+        return self.tr("Geometry tools")
 
-        tmpFile = system.getTempFilename()
+    def groupId(self):
+        return "geometrytools"
 
-        commands = []
+    def tags(self):
+        return self.tr("polygon,repair,broken,geometry").split(",")
+
+    def shortHelpString(self):
+        return self.tr("Automatic repair of single polygons (according to the "
+                       "OGC Simple Features / ISO19107 rules) using "
+                       "a constrained triangulation.")
+
+    def helpUrl(self):
+        return "https://github.com/tudelft3d/prepair"
+
+    def __init__(self):
+        super().__init__()
+
+    def initAlgorithm(self, config=None):
+        self.paradigms = [self.tr("Odd-even"), self.tr("Point set topology")]
+
+        self.addParameter(QgsProcessingParameterFeatureSource(self.INPUT,
+                                                              self.tr("Input layer"),
+                                                              [QgsProcessing.TypeVectorPolygon]))
+        self.addParameter(QgsProcessingParameterEnum(self.PARADIGM,
+                                                     self.tr("Repair paradigm"),
+                                                     self.paradigms,
+                                                     defaultValue=0))
+        self.addParameter(QgsProcessingParameterNumber(self.MIN_AREA,
+                                                       self.tr("Remove sliver polygons"),
+                                                       QgsProcessingParameterNumber.Double,
+                                                       0.0,
+                                                       True))
+        self.addParameter(QgsProcessingParameterNumber(self.SNAP_ROUNDING,
+                                                       self.tr("Snap round input"),
+                                                       QgsProcessingParameterNumber.Integer,
+                                                       0,
+                                                       True))
+        self.addParameter(QgsProcessingParameterBoolean(self.ONLY_INVALID,
+                                                        self.tr("Process only invalid geometries"),
+                                                        defaultValue=False))
+
+        self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT,
+                                                            self.tr("Repaired polygons"),
+                                                            QgsProcessing.TypeVectorPolygon))
+
+    def processAlgorithm(self, parameters, context, feedback):
+        arguments = []
+
         toolPath = prepairUtils.prepairPath()
-        if not toolPath:
-            toolPath = 'prepair'
-        commands.append(toolPath)
+        if toolPath == "":
+            toolPath = self.name()
 
+        arguments.append(toolPath)
+
+        paradigm = self.parameterAsEnum(parameters, self.PARADIGM, context)
         if paradigm == 1:
-            commands.append('--setdiff')
+            arguments.append("--setdiff")
 
+        minArea = self.parameterAsDouble(parameters, self.MIN_AREA, context)
         if minArea > 0.0:
-            commands.append('--minarea')
-            commands.append(unicode(minArea))
+            arguments.append("--minarea")
+            arguments.append("{}".format(minArea))
 
+        snapRounding = self.parameterAsInt(parameters, self.SNAP_ROUNDING, context)
         if snapRounding > 0:
-            commands.append('--isr')
-            commands.append(unicode(snapRounding))
+            arguments.append("--isr")
+            arguments.append("{}".format(snapRounding))
 
-        commands.append('-f')
-        commands.append(tmpFile)
+        onlyInvalid = self.parameterAsBool(parameters, self.ONLY_INVALID, context)
 
-        writer = self.getOutputFromName(self.OUTPUT).getVectorWriter(
-            layer.pendingFields().toList(), QGis.WKBMultiPolygon , layer.crs())
+        tmpFile = QgsProcessingUtils.generateTempFilename("prepair.shp")
+        arguments.append("-f")
+        arguments.append(tmpFile)
 
-        features = vector.features(layer)
-        total = 100.0 / len(features)
-        for count, ft in enumerate(features):
-            geom = ft.geometry()
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
+                                               source.fields(), source.wkbType(), source.sourceCrs())
+
+        features = source.getFeatures(QgsFeatureRequest(), QgsProcessingFeatureSource.FlagSkipGeometryValidityChecks)
+        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        for current, feat in enumerate(features):
+            if feedback.isCanceled():
+                break
+
+            geom = feat.geometry()
             if onlyInvalid and len(geom.validateGeometry()) == 0:
-                progress.setInfo(
-                    self.tr('Feature {} is valid, skipping...'.format(ft.id())))
-                progress.setPercentage(int(count * total))
+                feedback.pushInfo(
+                    self.tr("Feature {} is valid, skipping…".format(feat.id())))
+                feedback.setProgress(int(count * total))
                 continue
 
-            with open(tmpFile, 'w') as f:
-                f.write(geom.exportToWkt())
+            with open(tmpFile, "w") as f:
+                f.write(geom.asWkt())
 
-            result = prepairUtils.execute(commands, progress)
+            result = prepairUtils.execute(arguments, feedback)
 
             if len(result) == 0:
-                progress.setInfo(self.tr('Feature {} not repaired'.format(ft.id())))
-                progress.setPercentage(int(count * total))
+                feedback.poushInfo(self.tr("Feature {} not repaired".format(feat.id())))
+                feedback.setProgress(int(count * total))
                 continue
 
             geom = QgsGeometry.fromWkt(result[0].strip())
-            if geom is None or geom.isGeosEmpty():
-                progress.setInfo(
-                    self.tr('Empty geometry after repairing feature {}, '
-                            'skipping...'.format(ft.id())))
-                progress.setPercentage(int(count * total))
+            if geom is None or geom.isEmpty():
+                feedback.pushInfo(self.tr("Empty geometry after repairing "
+                                          "feature {}, skipping…".format(feat.id())))
+                feedback.setProgress(int(count * total))
                 continue
 
-            ft.setGeometry(geom)
-            writer.addFeature(ft)
+            feat.setGeometry(geom)
+            sink.addFeature(feat, QgsFeatureSink.FastInsert)
+            feedback.setProgress(int(current * total))
 
-            progress.setPercentage(int(count * total))
-
-        del writer
+        return {self.OUTPUT: dest_id}

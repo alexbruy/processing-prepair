@@ -5,7 +5,7 @@
     prepairProvider.py
     ---------------------
     Date                 : May 2014
-    Copyright            : (C) 2014-2017 by Alexander Bruy
+    Copyright            : (C) 2014-2018 by Alexander Bruy
     Email                : alexander dot bruy at gmail dot com
 ***************************************************************************
 *                                                                         *
@@ -19,7 +19,7 @@
 
 __author__ = 'Alexander Bruy'
 __date__ = 'May 2014'
-__copyright__ = '(C) 2014-2017, Alexander Bruy'
+__copyright__ = '(C) 2014-2018, Alexander Bruy'
 
 # This will get replaced with a git SHA1 when you do a git archive
 
@@ -28,58 +28,82 @@ __revision__ = '$Format:%H$'
 import os
 
 from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import QCoreApplication
 
-from processing.core.AlgorithmProvider import AlgorithmProvider
-from processing.core.ProcessingConfig import Setting, ProcessingConfig
+from qgis.core import QgsProcessingProvider, QgsMessageLog
+
+from processing.core.ProcessingConfig import ProcessingConfig, Setting
 
 from processing_prepair.prepair import prepair
 from processing_prepair.pprepair import pprepair
-from processing_prepair.prepairUtils import prepairUtils
+from processing_prepair import prepairUtils
 
 pluginPath = os.path.dirname(__file__)
 
 
-class prepairProvider(AlgorithmProvider):
+class PrepairProvider(QgsProcessingProvider):
 
     def __init__(self):
-        AlgorithmProvider.__init__(self)
+        super().__init__()
+        self.algs = []
 
-        self.activate = False
+    def id(self):
+        return "prepair"
 
-        self.alglist = [prepair(), pprepair()]
-        for alg in self.alglist:
-            alg.provider = self
+    def name(self):
+        return "prepair"
 
-    def initializeSettings(self):
-        AlgorithmProvider.initializeSettings(self)
+    def icon(self):
+        return QIcon(os.path.join(pluginPath, "icons", "prepair.png"))
 
-        ProcessingConfig.addSetting(Setting(
-            self.getDescription(),
-            prepairUtils.PREPAIR_EXECUTABLE,
-            self.tr('prepair executable'),
-            prepairUtils.prepairPath(),
-            valuetype=Setting.FILE))
-        ProcessingConfig.addSetting(Setting(
-            self.getDescription(),
-            prepairUtils.PPREPAIR_EXECUTABLE,
-            self.tr('pprepair executable'),
-            prepairUtils.prepairPath(),
-            valuetype=Setting.FILE))
+    def load(self):
+        ProcessingConfig.settingIcons[self.name()] = self.icon()
+        ProcessingConfig.addSetting(Setting(self.name(),
+                                            prepairUtils.PREPAIR_ACTIVE,
+                                            self.tr("Activate"),
+                                            False))
+        ProcessingConfig.addSetting(Setting(self.name(),
+                                            prepairUtils.PREPAIR_EXECUTABLE,
+                                            self.tr("prepair executable"),
+                                            prepairUtils.prepairPath(),
+                                            valuetype=Setting.FILE))
+        ProcessingConfig.addSetting(Setting(self.name(),
+                                            prepairUtils.PPREPAIR_EXECUTABLE,
+                                            self.tr("pprepair executable"),
+                                            prepairUtils.prepairPath(),
+                                            valuetype=Setting.FILE))
+        ProcessingConfig.addSetting(Setting(self.name(),
+                                            prepairUtils.PREPAIR_VERBOSE,
+                                            self.tr("Log commands output"),
+                                            False))
+        ProcessingConfig.readSettings()
+        self.refreshAlgorithms()
+        return True
 
     def unload(self):
-        AlgorithmProvider.unload(self)
-
+        ProcessingConfig.removeSetting(prepairUtils.PREPAIR_ACTIVE)
         ProcessingConfig.removeSetting(prepairUtils.PREPAIR_EXECUTABLE)
         ProcessingConfig.removeSetting(prepairUtils.PPREPAIR_EXECUTABLE)
 
-    def getName(self):
-        return 'prepair'
+    def isActive(self):
+        return ProcessingConfig.getSetting(prepairUtils.PREPAIR_ACTIVE)
 
-    def getDescription(self):
-        return 'prepair'
+    def setActive(self, active):
+        ProcessingConfig.setSettingValue(prepairUtils.PREPAIR_ACTIVE, active)
 
-    def getIcon(self):
-        return QIcon(os.path.join(pluginPath, 'icons', 'prepair.png'))
+    def getAlgs(self):
+        algs = [prepair(),
+                pprepair()
+               ]
 
-    def _loadAlgorithms(self):
-        self.algs = self.alglist
+        return algs
+
+    def loadAlgorithms(self):
+        self.algs = self.getAlgs()
+        for a in self.algs:
+            self.addAlgorithm(a)
+
+    def tr(self, string, context=''):
+        if context == "":
+            context = "PrepairProvider"
+        return QCoreApplication.translate(context, string)
