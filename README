@@ -4,9 +4,10 @@ prepair and pprepair are command line tools for repairing "broken" GIS polygons
 according to the international standard ISO19107 (Geographic information —
 Spatial schema).
 
-Processing (former SEXTANTE) is a geoprocessing environment that can be used to
-call native and third party algorithms from QGIS, making your spatial analysis
-tasks more productive and easy to accomplish.
+Processing is a geoprocessing environment that can be used to call native and
+third party algorithms from QGIS, making your spatial analysis tasks more
+productive and easy to accomplish.
 
-This plugin implements p(p)repair provider for QGIS Processing framework.
-Plugin requires QGIS >= 2.18.0
+This plugin implements (p)prepair provider for QGIS Processing framework.
+Requires QGIS >= 3.0
+
